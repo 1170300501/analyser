@@ -5,10 +5,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 
 public class ReadFileUtil {
 
-  public static String read(String filename) {
+  public static String read(String filename) throws UnsupportedEncodingException {
     InputStream is = null;
     try {
       is = new FileInputStream(new File(filename));
@@ -26,10 +27,14 @@ public class ReadFileUtil {
       e.printStackTrace();
     }
     
-    return new String(buf);
+    return new String(buf, 0, size, "GBK");
   }
   
   public static void main(String[] args) {
-    System.out.println(read("example/hello.c"));
+    try {
+      System.out.println(read("example/hello.c"));
+    } catch (UnsupportedEncodingException e) {
+      e.printStackTrace();
+    }
   }
 }

@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -25,7 +26,6 @@ import utils.ReadFileUtil;
 
 public class LexerGUI {
 
-  //private File file;       // 被读取文件
   private String content;  // 文本
   private Lexer lexer;     // 词法分析器
   
@@ -104,7 +104,11 @@ public class LexerGUI {
         String filepath = chooser.getSelectedFile().getAbsolutePath();
         fileField.setText(filepath);
         
-        content = ReadFileUtil.read(filepath);
+        try {
+          content = ReadFileUtil.read(filepath);
+        } catch (UnsupportedEncodingException e1) {
+          e1.printStackTrace();
+        }
         codeArea.setText(content);
       }
     });
@@ -120,10 +124,10 @@ public class LexerGUI {
     action.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         content = codeArea.getText();
-        System.out.println(content);
+        System.out.println(String.valueOf(content));
         lexer.init();
         
-        String result = lexer.tokensToString(lexer.discriminate(content));
+        String result = lexer.tokensToString(lexer.discriminate(String.valueOf(content)));
         tokenArea.setText(result);
       }
     });

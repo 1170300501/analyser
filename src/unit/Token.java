@@ -9,7 +9,7 @@ public class Token {
   }
   
   public void setValue(String value) {
-    if (key.equals("IDN") || key.equals("CONST") || key.equals("ERR")) {
+    if (key.equals("IDN") || key.equals("CONST") || key.equals("COMMIT") || key.equals("ERR")) {
       this.value = value;
     } else {
       this.value = "-";
