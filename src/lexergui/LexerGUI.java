@@ -5,34 +5,26 @@ import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.List;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.border.LineBorder;
 
 import lexer.Lexer;
-import unit.Token;
 import utils.FrameUtil;
 import utils.ReadFileUtil;
 
 public class LexerGUI {
 
-  private String content;  // 文本
   private Lexer lexer;     // 词法分析器
-  
-  public LexerGUI() {
-    lexer = new Lexer();
-  }
-  
+
   public void mainWindow() {
     // 创建新框架对象
     JFrame frame = new JFrame("词法分析器");
@@ -71,25 +63,40 @@ public class LexerGUI {
     JTextArea codeArea = new JTextArea();
     codeArea.setFont(b);
     codeArea.setBorder(new LineBorder(new java.awt.Color(127,157,185), 1, false));
-    codeArea.setLineWrap(true);
-    codeArea.setOpaque(false);
-    panel.add(codeArea);
-    codeArea.setBounds(100, 260, 500, 500);
+    JScrollPane jsp = new JScrollPane(codeArea);
+    jsp.setOpaque(false);
+    panel.add(jsp);
+    jsp.setBounds(100, 260, 500, 500);
     
     // 输出标签
-    JLabel out = new JLabel("输出:");
-    out.setFont(l);
-    panel.add(out);
-    out.setBounds(680, 170, 60, 30);
+    JLabel outToken = new JLabel("输出TOKEN:");
+    outToken.setFont(l);
+    panel.add(outToken);
+    outToken.setBounds(680, 160, 140, 30);
+    
+    // 输出标签
+    JLabel outErr = new JLabel("输出ERROR:");
+    outErr.setFont(l);
+    panel.add(outErr);
+    outErr.setBounds(680, 510, 140, 30);
     
     // 词法分析结果内容
     JTextArea tokenArea = new JTextArea();
     tokenArea.setFont(b);
     tokenArea.setBorder(new LineBorder(new java.awt.Color(127,157,185), 1, false));
-    tokenArea.setLineWrap(true);
-    tokenArea.setOpaque(false);
-    panel.add(tokenArea);
-    tokenArea.setBounds(680, 210, 600, 600);
+    JScrollPane jsp1 = new JScrollPane(tokenArea);
+    jsp1.setOpaque(false);
+    panel.add(jsp1);
+    jsp1.setBounds(680, 200, 600, 300);
+    
+    // 词法分析结果内容
+    JTextArea errArea = new JTextArea();
+    errArea.setFont(b);
+    errArea.setBorder(new LineBorder(new java.awt.Color(127,157,185), 1, false));
+    JScrollPane jsp2 = new JScrollPane(errArea);
+    jsp2.setOpaque(false);
+    panel.add(jsp2);
+    jsp2.setBounds(680, 560, 600, 300);
 
     // 读入按钮
     JButton read = new JButton("浏览...");
@@ -104,11 +111,13 @@ public class LexerGUI {
         String filepath = chooser.getSelectedFile().getAbsolutePath();
         fileField.setText(filepath);
         
+        String content = null;
         try {
           content = ReadFileUtil.read(filepath);
         } catch (UnsupportedEncodingException e1) {
           e1.printStackTrace();
         }
+        
         codeArea.setText(content);
       }
     });
@@ -123,12 +132,15 @@ public class LexerGUI {
 
     action.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        content = codeArea.getText();
-        System.out.println(String.valueOf(content));
-        lexer.init();
+        String content = codeArea.getText();
         
-        String result = lexer.tokensToString(lexer.discriminate(String.valueOf(content)));
-        tokenArea.setText(result);
+        lexer = new Lexer();
+        lexer.init();
+        lexer.discriminate(String.valueOf(content));
+        
+        String[] result = lexer.resToString();
+        tokenArea.setText(result[0]);
+        errArea.setText(result[1]);
       }
     });
 

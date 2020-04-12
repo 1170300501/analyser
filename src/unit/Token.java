@@ -9,10 +9,8 @@ public class Token {
   }
   
   public void setValue(String value) {
-    if (key.equals("IDN") || key.equals("CONST") || key.equals("COMMIT") || key.equals("ERR")) {
+    if (key.equals("IDN") || key.equals("CONST") || key.equals("COMMENT")) {
       this.value = value;
-    } else {
-      this.value = "-";
     }
   }
   
@@ -21,7 +19,7 @@ public class Token {
   }
   
   public String getValue() {
-    return value;
+    return (value == null) ? "_" : value;
   }
   
   @Override
@@ -46,4 +44,5 @@ public class Token {
   public String toString() {
     return "<" + key + ", " + value + ">";
   }
+  
 }

@@ -3,6 +3,7 @@ package lexer;
 import jxl.*;
 import jxl.read.biff.BiffException;
 import unit.Delta;
+import unit.LexerError;
 import unit.Token;
 
 import java.io.BufferedReader;
@@ -10,7 +11,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,14 +20,21 @@ import java.util.Set;
 import java.util.Stack;
 
 public class Lexer {
-  private List<Delta> turns;              // 转移函数集，δ(s,a)
+  private Map<Integer, Delta> columns;    // 对应列的表达式
+  private Integer[][] turns;              // 转移函数列表，δ(s,a)
   private Map<Integer, Token> rcvStates;  // 接收状态集
   private Set<String> keywords;           // C关键字集
+  private List<Token> tokens;             // token列表
+  private List<LexerError> errs;               // 错误列表
+  private List<String> words;             // 单词列表
   
   public Lexer() {
-    turns = new ArrayList<>();
+    columns = new HashMap<>();
     rcvStates = new HashMap<>();
     keywords = new HashSet<>();
+    tokens = new ArrayList<>();
+    errs = new ArrayList<>();
+    words = new ArrayList<>();
   }
   
   /**
@@ -52,7 +59,10 @@ public class Lexer {
     for (int i = 2; i < cols; i++) {
       String s = sheet.getCell(i, 0).getContents();
       inchars.put(i, s);
+      columns.put(i, new Delta(s));
     }
+    
+    turns = new Integer[rows][cols];
     
     for (int i = 1; i < rows; i++) {
       int ord = new Integer(sheet.getCell(0, i).getContents());
@@ -64,20 +74,15 @@ public class Lexer {
       }
       
       for (int j = 2; j < cols; j++) {
-        String s = inchars.get(j);
         String next = sheet.getCell(j, i).getContents();
         
         if (next.length() != 0) {  // 存在状态转移，添加到状态转移函数集中
-          Delta delta = new Delta(ord, s);
-          delta.setOutstate(new Integer(next));
-          turns.add(delta);
+          turns[ord][j] = Integer.valueOf(next);
         }
       }
     }
 
     book.close();
-    
-    rcvStates.put(-1, new Token("ERR"));  // 添加一个可接收的ERR状态
     
     try {
       BufferedReader reader = new BufferedReader(new FileReader(new File("keywords.txt")));
@@ -100,70 +105,52 @@ public class Lexer {
    * DFA识别词法过程
    * 
    * @param string  输入单词
-   * @return 单词对应的词法
    */
-  public List<Token> discriminate(String content) {
+  public void discriminate(String content) {
     char[] array = content.toCharArray();
-    List<Token> tokens = new ArrayList<>();  // token列表
     Stack<Integer> stack = new Stack<>();
     int next = 0;   // 初始状态
     int index = 0;  // 数组下标值
-    int begin = 0;  // 一个word的初始下标
-    int last = -1;   // 上一接收状态下标
+    int last = -1;  // 上一接收状态下标
     stack.add(next);
     
     String word = null;
     do {
       String in = String.valueOf(array[index]);
-      int copy = next;
+      int now = next;
       next = -1;
-      Delta d = new Delta(copy, in);
       
-      for (Delta t : turns) {  // 遍历转换函数集
-        if (d.equals(t) || d.match(t)) {
-          next = t.getOutstate();  // 进入当前状态
-          if (next != 0) {  // 在初始状态意味着转移字符是一个可跳过的字符
+      if (now == 0 && Character.isWhitespace(array[index])) {  // 在初始状态意味着转移字符是一个可跳过的字符
+        next = 0;
+      } else {
+        Delta d = new Delta(in);
+        for (int i = 0; i < turns[0].length; i++) {
+          Delta t = columns.get(i);
+          if (turns[now][i] != null && (d.equals(t) || d.match(t))) {
+            next = turns[now][i];
             stack.add(next);
+            break;
           }
-          //System.out.println(t + " "+ d + " "+d.equals(t));
-          break;
         }
       }
-      //System.out.println(" " + in + " " + index + " "+last);
-      //System.out.println(last+" "+begin+" "+next + " "+index);
-      //System.out.println(stack);
       
       if (next == -1) {  // 如果该状态不存在后继状态，进入异常处理
         int[] peer = handle(stack, array, last);
         index = peer[0];
         next = peer[1];
-        last = index - 1;
-        word = content.substring(begin, index);
         
-        if (next != 0) {  // 如果异常处理后能够找到一个最近的可接收状态
-
-          Token newToken;
-          if (next == 1 && keywords.contains(word)) {
-            newToken = new Token(word.toUpperCase());
-          } else {
-            Token token = rcvStates.get(next);
-            newToken = new Token(token.getKey());  // 创建一个新token添加到token列表，
-                                                   // 由于hashmap是可变的
-          }
-          
-          newToken.setValue(word);                     
-          tokens.add(newToken);
-          
-          next = 0;
-          stack.clear();
-          stack.add(next);
-        }
-        begin = index;
+        word = content.substring(last + 1, index);
+        int line = getlines(array, last);
+        
+        addWord(line, next, word);
+        
+        last = index - 1;
+        next = 0;
+        stack.clear();
+        stack.add(next);
       } else {
         if (next == 0) {  // 遇到可跳过的字符
           last++;
-          begin++;
-          //System.out.println(last + " "+begin);
         }
         index++;
       }
@@ -174,22 +161,12 @@ public class Lexer {
       if (!rcvStates.containsKey(next)) {  // 否则，当最后一个字符无法被接收，认定它是一个ERR
         next = -1;
       }
+      word = content.substring(last + 1, index);
+      int line = getlines(array, last);
       
-      word = content.substring(begin, index);
-      Token newToken;
-      
-      if (next == 1 && keywords.contains(word)) {
-        newToken = new Token(word.toUpperCase());
-      } else {
-        Token token = rcvStates.get(next);
-        newToken = new Token(token.getKey());
-      }
-
-      newToken.setValue(word);
-      tokens.add(newToken);
+      addWord(line, next, word);
     }
     
-    return tokens;
   }
   
   /**
@@ -219,58 +196,121 @@ public class Lexer {
     if (stack.isEmpty()) {  // 进入恐慌模式
       int len = array.length;
       boolean found = false;
+      
       index = last + st.size();  // 从当前字符的下一字符开始寻找
       int now = st.peek();
-      //System.out.println("now"+now + " "+index);
       
       while (index < len) {  // 向前移动直到找到一个可接收字符
-        Delta d = new Delta(now, String.valueOf(array[index]));
-        for (Delta t : turns) {
-          if (d.equals(t) || d.match(t)) {
+        Delta d = new Delta(String.valueOf(array[index]));
+        boolean space = false;
+        if (Character.isWhitespace(array[index])) {
+          space = true;
+        }
+        for (int i = 0; i < turns[0].length; i++) {
+          if (rcvStates.containsKey(now) || space) { // 当遇到空格时同样视为该单词结束
             found = true;
             break;
+          } else {
+            Delta t = columns.get(i);
+            if (turns[now][i] != null && (d.equals(t) || d.match(t))) {
+              now = i;
+            }
           }
         }
-        index++;
+        if (!space) {
+          index++;
+        }
         if (found) {
           break;
         }
       }
     }
-    //System.out.println(index + " "+state);
     return new int[] { index, state };
   }
-  
+
   /**
    * 按token顺序输出所有token内容
    * 
    * @param tokens
    * @return tokens的字符串
    */
-  public String tokensToString(List<Token> tokens) {
-    StringBuilder builder = new StringBuilder();
+  public String[] resToString() {
+    String[] res = new String[2];
+    
+    StringBuilder builder1 = new StringBuilder();
     for (Token token : tokens) {
-      builder.append(token.toString() + "\r\n");
+      builder1.append(token.toString() + "\r\n");
+    }
+    StringBuilder builder2 = new StringBuilder();
+    for (LexerError err : errs) {
+      builder2.append(err.toString() + "\r\n");
     }
     
-    return builder + "";
+    res[0] = builder1 + "";
+    res[1] = builder2 + "";
+    
+    return res;
+  }
+  
+  public List<String> getWords() {
+    return words;
+  }
+  
+  public List<Token> getTokens() {
+    return tokens;
+  }
+  
+  /**
+   * 添加一个token或error
+   * 
+   * @param line
+   * @param next
+   * @param word
+   */
+  private void addWord(int line, int next, String word) {
+    if (next == -1) {  // 识别到一个错误
+      errs.add(new LexerError(line, word));
+    } else {
+      Token newToken;
+      
+      if (next == 1 && keywords.contains(word)) {
+        newToken = new Token(word.toUpperCase());
+      } else {
+        Token token = rcvStates.get(next);
+        newToken = new Token(token.getKey());  // 创建一个新token添加到token列表，
+                                               // 由于hashmap是可变的
+      }
+      
+      newToken.setValue(word);                     
+      tokens.add(newToken);
+      words.add(word);
+    }
+    
+  }
+  
+  /**
+   * 获取行数
+   * 
+   * @param array
+   * @param index
+   * @return
+   */
+  private int getlines(char[] array, int index) {
+    int line = 0;
+    for (int i = 0; i < index; i++) {
+      if (array[i] == '\n') {
+        line++;
+      }
+    }
+    return line;
   }
   
   public static void main(String[] args) {
-    String t = ",";
-    String s = "int main()\r\n" + 
-        "{\r\n" + 
-        "    printf(\"hello\n\");\r\n" + 
-        "    return 0;\r\n" + 
-        "}";
     Lexer lexer = new Lexer();
     lexer.init();
-    //System.out.println(s);
-    List<Token> tokens = lexer.discriminate(t);
-    
-    for (Token token : tokens) {
-      System.out.println(token.toString());
-    }
+    lexer.discriminate("int 234");
+    System.out.println("!"+lexer.resToString()[0]);
+    System.out.println("#"+lexer.resToString()[1]);
   }
 }
 
