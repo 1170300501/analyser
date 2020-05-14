@@ -1,0 +1,59 @@
+S' -> S
+S -> RCDS STB PROCS
+
+PROCS -> ST { CONTS } PROCS |  
+
+CONTS -> CONTS BLOCK | CONTS SENT |  
+BLOCK -> BRCH | CIR
+SENT -> VAR | EVN | CALL | EXP
+
+ID -> IDN | * IDN
+
+N -> NUMBER | V
+
+P -> P' P'' |  
+P' -> K ID
+P'' -> , P' P'' |  
+
+V -> ID V'
+V' -> [ N ] V' |  
+
+RCDS -> RCDS RCD |  
+
+STB -> STB ST ; |  
+ST -> P' ( P )
+
+CALL -> ID ( T' ) ; | ID ( ) ;
+
+TYPE -> D K | K
+D -> SIGNED | UNSIGNED | CONST | EXTERN | STATIC | VOLATILE
+K -> INT | LONG | SHORT | FLOAT | DOUBLE | CHAR | VOID
+
+VAR -> TYPE T' ;
+T' -> V | V T''
+T'' -> , T'' | V
+
+RCD -> STRUCT IDN { VB } | TYPEDEF STRUCT IDN { VB } IDN ;
+VB -> VB VAR |  
+
+EXP -> E ;
+E -> E' | CONTINUE | BREAK | RETURN N
+E' -> E' - T | E' + T | E' -- | E' ++ | T
+T -> T * F | T / F | T % F | F
+F -> ( E' ) | V | NUMBER
+
+EVN -> V = EXP | V = CALL | V = CHA ; | V = STRING ;
+
+REL -> REL || R' | REL && R' | ! REL | R
+R -> R < R' | R > R' | R <= R' | R >= R' | R == R' | R != R' | R'
+R' -> R' || R'' | R' && R'' | ! R'' | R''
+R'' -> ( R ) | N
+
+BRCH -> IF ( E4 ) { CONTS } CH
+CH -> ELSE { CONTS } |  
+
+CIR -> FOR ( E1 ; E2 ; E3 ) { CONTS } | WHILE ( E4 ) { CONTS } | DO { CONTS } WHILE ( E4 ) ;
+E1 -> EVN |  
+E2 -> E4 |  
+E3 -> E' |  
+E4 -> REL | N

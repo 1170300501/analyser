@@ -20,13 +20,13 @@ import java.util.Set;
 import java.util.Stack;
 
 public class Lexer {
-  private Map<Integer, Delta> columns;    // 对应列的表达式
-  private Integer[][] turns;              // 转移函数列表，δ(s,a)
-  private Map<Integer, Token> rcvStates;  // 接收状态集
-  private Set<String> keywords;           // C关键字集
-  private List<Token> tokens;             // token列表
-  private List<LexerError> errs;               // 错误列表
-  private List<String> words;             // 单词列表
+  private Map<Integer, Delta> columns;       // 对应列的表达式
+  private Integer[][] turns;                 // 转移函数列表，δ(s,a)
+  private Map<Integer, Token> rcvStates;     // 接收状态集
+  private Set<String> keywords;              // C关键字集
+  private List<Token> tokens;                // token列表
+  private List<LexerError> errs;             // 错误列表
+  
   
   public Lexer() {
     columns = new HashMap<>();
@@ -34,7 +34,6 @@ public class Lexer {
     keywords = new HashSet<>();
     tokens = new ArrayList<>();
     errs = new ArrayList<>();
-    words = new ArrayList<>();
   }
   
   /**
@@ -112,6 +111,7 @@ public class Lexer {
     int next = 0;   // 初始状态
     int index = 0;  // 数组下标值
     int last = -1;  // 上一接收状态下标
+    
     stack.add(next);
     
     String word = null;
@@ -140,7 +140,7 @@ public class Lexer {
         next = peer[1];
         
         word = content.substring(last + 1, index);
-        int line = getlines(array, last);
+        int line = getlines(content, last, index, word);
         
         addWord(line, next, word);
         
@@ -162,7 +162,7 @@ public class Lexer {
         next = -1;
       }
       word = content.substring(last + 1, index);
-      int line = getlines(array, last);
+      int line = getlines(content, last, index, word);
       
       addWord(line, next, word);
     }
@@ -227,6 +227,10 @@ public class Lexer {
     }
     return new int[] { index, state };
   }
+  
+  public Set<String> getKeywords() {
+    return keywords;
+  }
 
   /**
    * 按token顺序输出所有token内容
@@ -241,6 +245,7 @@ public class Lexer {
     for (Token token : tokens) {
       builder1.append(token.toString() + "\r\n");
     }
+    
     StringBuilder builder2 = new StringBuilder();
     for (LexerError err : errs) {
       builder2.append(err.toString() + "\r\n");
@@ -252,10 +257,6 @@ public class Lexer {
     return res;
   }
   
-  public List<String> getWords() {
-    return words;
-  }
-  
   public List<Token> getTokens() {
     return tokens;
   }
@@ -263,7 +264,7 @@ public class Lexer {
   /**
    * 添加一个token或error
    * 
-   * @param line
+   * @param nowline
    * @param next
    * @param word
    */
@@ -281,9 +282,11 @@ public class Lexer {
                                                // 由于hashmap是可变的
       }
       
-      newToken.setValue(word);                     
+      newToken.setValue(word);    
+      newToken.setWord(word);
+      newToken.setLine(line);
       tokens.add(newToken);
-      words.add(word);
+
     }
     
   }
@@ -295,20 +298,40 @@ public class Lexer {
    * @param index
    * @return
    */
-  private int getlines(char[] array, int index) {
-    int line = 0;
-    for (int i = 0; i < index; i++) {
-      if (array[i] == '\n') {
+  private int getlines(String content, int last, int index, String word) {
+    /*int line = 1;
+    int pre = 0;
+    if (tokens.size() != 0) {
+      Token t = tokens.get(tokens.size() - 1);
+      pre = last;
+      line = t.getLine();
+      for (int j = pre; j < index - word.length(); j++) {
+        if (content.charAt(j) == '\n') {
+          line++;
+        }
+      }
+      System.out.println(tokens + word + " " +last + " " + pre + " " + (index - word.length()));
+    }*/
+    int line = 1;
+    for (int i = 0; i < last + 1; i++) {
+      if (content.charAt(i) == '\n') {
         line++;
       }
     }
+    
     return line;
   }
   
   public static void main(String[] args) {
     Lexer lexer = new Lexer();
     lexer.init();
-    lexer.discriminate("int 234");
+    lexer.discriminate("    char name;\r\n" + 
+        "    unsigned int id;\r\n" + 
+        "    double account;\r\n" + 
+        "} St;\r\n" + 
+        "\r\n" + 
+        "char *num();\r\n" + 
+        "double func(int i, long j);");
     System.out.println("!"+lexer.resToString()[0]);
     System.out.println("#"+lexer.resToString()[1]);
   }

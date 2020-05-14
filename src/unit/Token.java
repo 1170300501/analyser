@@ -3,15 +3,25 @@ package unit;
 public class Token {
   private String key;
   private String value;
+  private String word;
+  private int line;
   
   public Token(String type) {
     this.key = type;
   }
   
   public void setValue(String value) {
-    if (key.equals("IDN") || key.equals("CONST") || key.equals("COMMENT")) {
+    if (key.equals("IDN") || key.equals("NUMBER") || key.equals("STRING") || key.equals("CHA")) {
       this.value = value;
     }
+  }
+  
+  public void setWord(String word) {
+    this.word = word;
+  }
+  
+  public void setLine(int line) {
+    this.line = line;
   }
   
   public String getKey() {
@@ -20,6 +30,14 @@ public class Token {
   
   public String getValue() {
     return (value == null) ? "_" : value;
+  }
+  
+  public String getWord() {
+    return word;
+  }
+  
+  public int getLine() {
+    return line;
   }
   
   @Override
@@ -42,7 +60,7 @@ public class Token {
   
   @Override
   public String toString() {
-    return "<" + key + ", " + value + ">";
+    return "{ " + line + " } " + word + ": <" + key + ", " + value + ">";
   }
   
 }

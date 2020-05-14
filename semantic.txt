@@ -1,0 +1,125 @@
+S' -> S
+S -> RCDS STB PROCS
+
+PROCS -> ST { CONTS } PROCS
+PROCS ->  
+
+CONTS -> CONTS BLOCK
+CONTS -> CONTS SENT
+CONTS ->  
+
+BLOCK -> BRCH
+BLOCK -> CIR
+
+SENT -> VAR
+SENT -> EVN
+SENT -> CALL
+SENT -> EXP
+SENT -> E
+
+ID -> IDN { ID.lexeme = IDN.lexeme ; }
+ID -> * IDN { ID.lexeme = IDN.lexeme ; t = pointer( t ) ; w = 4 ; }
+
+N -> NUMBER
+N -> V
+
+P -> P' P''
+P ->  
+P' -> K ID
+P'' -> , P' P''
+P'' ->  
+
+X -> V
+V -> ID V' { enter(ID.lexeme,V'.type,offset); offset = offset + T.width; }
+V' -> [ N ] V' { V'.type = array(N.val,V'1.type); V'.width = N.val * V'1.width; }
+V' ->   { V'.type = t ; V'.width = w; }
+
+RCDS -> RCDS RCD
+RCDS ->  
+
+STB -> STB ST ;
+STB ->  
+ST -> P' ( P )
+
+CALL -> ID ( T' ) ;
+CALL -> ID ( ) ;
+
+TYPE -> INT { K.type = int; K.width = 4; }
+TYPE -> LONG { K.type = long; K.width = 8; }
+TYPE -> SHORT { K.type = short; K.width = 2; }
+TYPE -> FLOAT { K.type = float; K.width = 4; }
+TYPE -> DOUBLE { K.type = double; K.width = 8; }
+TYPE -> CHAR { K.type = char; K.width = 1; }
+TYPE -> VOID { K.type = void; K.width = 0; }
+
+VAR -> TYPE M T' ;
+M ->   { t = TYPE.type ; w = TYPE.width ; }
+T' -> V T''
+T'' -> , V T''
+T'' ->  
+
+RCD -> STRUCT IDN { VB }
+RCD -> TYPEDEF STRUCT IDN { VB } IDN ;
+VB -> VB VAR
+VB ->  
+
+E -> CONTINUE { gen('continue'); }
+E -> BREAK { gen('continue'); }
+E -> RETURN N
+
+EXP -> E' ; 
+E' -> E' - T { E'.addr = newtemp( ); E'.code = E'1.code || T.code || gen(E'.addr '=' E'1.addr '-' T.addr); }
+E' -> E' + T { E'.addr = newtemp( ); E'.code = E'1.code || T.code || gen(E'.addr '=' E'1.addr '+' T.addr); }
+E' -> E' -- { E'.addr = newtemp( ); E'.code = E'1.code || gen(E'1.addr '++'); }
+E' -> E' ++ { E.addr = newtemp( ); E'.code = E'1.code || gen(E'1.addr '--'); }
+E' -> T
+T -> T * F { T.addr = newtemp( ); T.code = T1.code || F.code || gen(T.addr '=' T1.addr '*' F.addr); }
+T -> T / F { T.addr = newtemp( ); T.code = T1.code || F.code || gen(T.addr '=' T1.addr '/' F.addr); }
+T -> T % F { T.addr = newtemp( ); T.code = T1.code || F.code || gen(T.addr '=' T1.addr '%' F.addr); }
+T -> F { T.addr = newtemp( ); T.addr = F.addr ; T.code = F.code ; }
+F -> ( E' ) { F.addr = newtemp( ); F.addr = E'.addr ; F.code = E'.code ; }
+F -> X { F.addr = lookup(X.lexeme); if F.addr == null then error ; F.code = '' ; }
+F -> NUMBER { F.addr = NUMBER; F.code = '' ; }
+
+EVN -> X = EXP { p = lookup(X.lexeme); if p == null then error ; EVN.code = EXP.code || gen( p '=' EXP.addr ); }
+EVN -> X = CALL
+EVN -> X = CHA ; { p = lookup(X.lexeme); if p == null then error ; gen( p '=' CHA.addr ); }
+EVN -> X = STRING ; { p = lookup(X.lexeme); if p == null then error ; gen( p '=' STRING.addr ); }
+
+REL -> REL || R'
+REL -> REL && R'
+REL -> ! REL
+REL -> R
+R -> R < R'
+R -> R > R'
+R -> R <= R'
+R -> R >= R'
+R -> R == R'
+R -> R != R'
+R -> R'
+R' -> R' || R''
+R' -> R' && R''
+R' -> ! R''
+R' -> R''
+R'' -> ( R )
+R'' -> N
+
+BRCH -> IF ( E4 ) { CONTS } CH
+CH -> ELSE { CONTS }
+CH ->  
+E2 -> E4
+E2 ->  
+E3 -> E'
+E4 -> REL
+
+CIR -> FOR ( E1 ; E2 ; E3 ) { CONTS }
+CIR -> WHILE ( E4 ) { CONTS }
+CIR -> DO { CONTS } WHILE ( E4 ) ;
+E1 -> EVN
+E1 ->  
+E2 -> E4
+E2 ->  
+E3 -> E'
+E3 ->  
+E4 -> REL
+E4 ->  

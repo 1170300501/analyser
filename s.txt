@@ -1,0 +1,140 @@
+NUMBER IDN CHA STRING INT LONG SHORT FLOAT DOUBLE CHAR VOID STRUCT TYPEDEF CONTINUE BREAK RETURN ( ) [ ] { } - + -- ++ * / % = ; , && || ! < > <= >= == != IF ELSE FOR WHILE DO
+S' -> S @ 0 @
+S -> M1 RCDS STB PROCS
+
+PROCS -> ST { CONTS } PROCS
+PROCS ->  
+
+CONTS -> CONTS BLOCK @ 4 @
+CONTS -> CONTS SENT
+CONTS ->  
+
+BLOCK -> BRCH
+BLOCK -> CIR
+
+SENT -> VAR
+SENT -> EVN ;
+SENT -> CALL ;
+SENT -> E' ;
+SENT -> E ;
+
+REL -> REL || M2 R @ 14 @
+REL -> REL && M2 R
+REL -> ! R
+REL -> R
+
+ID -> IDN @ 18 @
+ID -> * IDN @ 19 @
+
+V -> ID V' @ 20 @
+V' -> [ E' ] V' @ 21 @
+V' ->   @ 22 @
+
+TYPE -> INT @ 23 @
+TYPE -> LONG
+TYPE -> SHORT
+TYPE -> FLOAT
+TYPE -> DOUBLE
+TYPE -> CHAR
+TYPE -> VOID
+
+VAR -> TYPE M3 T' ; @ 30 @
+M3 ->   @ 31 @
+T' -> V T'' @ 32 @
+T'' -> , V T'' @ 33 @
+T'' ->   @ 34 @
+
+RCDS -> RCDS RCD @ 35 @
+RCDS ->  
+
+STB -> STB ST ; @ 37 @
+STB ->  
+ST -> P' IDN M4 ( P )
+
+CALL -> ID ( U ) @ 40 @
+M1 ->   @ 41 @
+
+RCD -> STRUCT IDN M5 { VB } ; @ change width 42 @
+RCD -> TYPEDEF STRUCT IDN M5 { VB } IDN ;
+VB -> VB VAR
+VB ->  
+M5 ->  
+
+E -> CONTINUE @ 47 @
+E -> BREAK
+E -> RETURN E'
+
+EXP -> E' ; @ 50x @
+E' -> E' - T @ 51 @
+E' -> E' + T
+E' -> E' -- @ 53 @
+E' -> E' ++
+E' -> T @ 55 @
+T -> T * F @ 56 @
+T -> T / F
+T -> T % F
+T -> - F @ 59 @
+T -> F @ 60 @
+F -> ( E' )
+F -> NUMBER
+F -> ID
+F -> X @ 64 @
+
+X -> ID [ E' ]
+X -> X [ E' ] @ 66 @
+
+EVN -> X = RIGHT
+EVN -> ID = RIGHT
+
+RIGHT -> E'
+RIGHT -> CALL
+RIGHT -> CHA
+RIGHT -> STRING
+
+M4 ->   @ enter 73 @
+P -> P''' P''
+P ->  
+P' -> TYPE *
+P' -> TYPE
+P'' -> , P''' P''
+P'' ->  
+P''' -> P' IDN @ 80 @
+
+U -> E' U'
+U ->  
+U' -> , E' U'
+U' ->  
+
+RELOP -> < @ 85 @
+RELOP -> >
+RELOP -> <=
+RELOP -> >=
+RELOP -> ==
+RELOP -> !=
+R -> E' RELOP E' @ 91 @
+R -> ( REL )
+R -> E'
+
+M2 ->   @ 94 @
+
+BRCH -> IF ( REL ) M2 SENT CH
+BRCH -> IF ( REL ) M2 { CONTS } CH
+CH -> M6 ELSE M2 SENT
+CH -> M6 ELSE M2 { CONTS }
+CH ->   @ 99 @
+M6 ->  
+
+CIR -> FOR ( E1 ; M2 E2 ; M2 E3 N ) M2 C @ 101 @
+CIR -> WHILE M2 ( REL ) M2 C
+CIR -> DO M2 { CONTS } WHILE M2 ( REL ) ;
+C -> ;
+C -> SENT
+C -> { CONTS }
+E1 -> EVN
+E1 ->  
+E2 -> REL @ 109 @
+E2 ->  
+E3 -> EVN
+E3 -> E'
+E3 ->  
+N ->  

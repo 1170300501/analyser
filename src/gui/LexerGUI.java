@@ -1,4 +1,4 @@
-package lexergui;
+package gui;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -29,7 +29,7 @@ public class LexerGUI {
     // 创建新框架对象
     JFrame frame = new JFrame("词法分析器");
     // 调用框架初始化方法
-    FrameUtil.initFrame(frame, 1400, 950);
+    FrameUtil.initFrame(frame, 1400, 950, true);
     // 创建新的面
     JPanel panel = new JPanel();
     panel.setBackground(new Color(255,250,205));

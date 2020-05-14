@@ -6,7 +6,7 @@ import java.awt.Toolkit;
 import javax.swing.JFrame;
 
 public class FrameUtil {
-  public static void initFrame(JFrame frame,int width,int height ) {
+  public static void initFrame(JFrame frame, int width, int height, boolean isFrame) {
     //获取默认系统工具包
     Toolkit toolkit = Toolkit.getDefaultToolkit();
     //获取屏幕的分辨率
@@ -17,6 +17,10 @@ public class FrameUtil {
     //设置窗体的可见性
     frame.setVisible(true);
     //设置窗体关闭
-    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-}
+    if (isFrame) {
+      frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    } else {
+      frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }
+  }
 }
